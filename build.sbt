@@ -4,6 +4,8 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.7"
 )
 
+resolvers += "Twitter" at "http://maven.twttr.com"
+
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
