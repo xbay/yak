@@ -12,6 +12,7 @@ lazy val versions = new {
   val logback = "1.1.3"
   val scalaz = "7.1.3"
   val spec2 = "3.6.4"
+  val akka = "2.3.13"
 }
 
 lazy val root = (project in file(".")).
@@ -23,6 +24,14 @@ lazy val root = (project in file(".")).
       "org.specs2" %% "specs2-core" % versions.spec2 % "test",
       "ch.qos.logback" % "logback-classic" % versions.logback,
       "joda-time" % "joda-time" % versions.jodaTime,
+
+      "com.typesafe.akka" %% "akka-actor" % versions.akka,
+      "com.typesafe.akka" %% "akka-contrib" % versions.akka,
+      "com.typesafe.akka" %% "akka-agent" % versions.akka,
+      "com.typesafe.akka" %% "akka-kernel" % versions.akka,
+      "com.typesafe.akka" %% "akka-remote" % versions.akka,
+      "com.typesafe.akka" %% "akka-slf4j" % versions.akka,
+      "com.typesafe.akka" %% "akka-testkit" % versions.akka,
 
       "com.twitter.finatra" % "finatra-root_2.11" % versions.finatra,
       "com.twitter.finatra" % "finatra-http_2.11" % versions.finatra,
