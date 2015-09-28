@@ -16,11 +16,13 @@ lazy val versions = new {
 }
 
 assemblyMergeStrategy in assembly := {
-    case PathList(ps @ _*) if ps.last endsWith "BUILD" => MergeStrategy.first
-    case x =>
-       val oldStrategy = (assemblyMergeStrategy in assembly).value
-       oldStrategy(x)
+  case PathList(ps @ _*) if ps.last endsWith "BUILD" => MergeStrategy.first
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
 }
+
+mainClass in assembly := Some("io.github.xbay.server.HelloFinatraServerMain")
 
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
