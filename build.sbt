@@ -15,6 +15,13 @@ lazy val versions = new {
   val akka = "2.3.13"
 }
 
+assemblyMergeStrategy in assembly := {
+    case PathList(ps @ _*) if ps.last endsWith "BUILD" => MergeStrategy.first
+    case x =>
+       val oldStrategy = (assemblyMergeStrategy in assembly).value
+       oldStrategy(x)
+}
+
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(
