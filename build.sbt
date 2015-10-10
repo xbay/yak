@@ -7,11 +7,11 @@ lazy val commonSettings = Seq(
 resolvers += "Twitter" at "http://maven.twttr.com"
 
 lazy val versions = new {
-  val finatra = "2.0.0"
   val jodaTime = "2.8.2"
   val logback = "1.1.3"
   val scalaz = "7.1.3"
   val spec2 = "3.6.4"
+  val sprayVersion = "1.3.3"
   val akka = "2.3.13"
 }
 
@@ -22,7 +22,7 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-mainClass in assembly := Some("io.github.xbay.server.HelloFinatraServerMain")
+mainClass in assembly := Some("io.github.xbay.yak.Main")
 
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
@@ -42,16 +42,8 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-slf4j" % versions.akka,
       "com.typesafe.akka" %% "akka-testkit" % versions.akka,
 
-      "com.twitter.finatra" % "finatra-root_2.11" % versions.finatra,
-      "com.twitter.finatra" % "finatra-http_2.11" % versions.finatra,
-      "com.twitter.finatra" % "finatra-slf4j_2.11" % versions.finatra,
-      "com.twitter.finatra" % "finatra-jackson_2.11" % versions.finatra,
-      "com.twitter.finatra" % "finatra-utils_2.11" % versions.finatra,
-      "com.twitter.finatra" % "finatra-httpclient_2.11" % versions.finatra,
-
-      "com.twitter.inject" % "inject-server_2.11" % versions.finatra,
-      "com.twitter.inject" % "inject-app_2.11" % versions.finatra,
-      "com.twitter.inject" % "inject-modules_2.11" % versions.finatra,
-      "com.twitter.inject" % "inject-core_2.11" % versions.finatra
+      "io.spray"          %% "spray-can"       % versions.sprayVersion,
+      "io.spray"          %% "spray-routing"   % versions.sprayVersion,
+      "io.spray"          %% "spray-json"      % "1.3.1"
     )
   )
