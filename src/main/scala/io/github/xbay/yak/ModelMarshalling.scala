@@ -10,5 +10,6 @@ trait ModelMarshalling extends DefaultJsonProtocol {
 
     implicit val createEventSourceReqeustFormat = jsonFormat2(CreateEventSourceRequest)
     implicit val createEventSourceResponseFormat = jsonFormat1(CreateEventSourceResponse)
+    implicit val eventSourceResponseFormat = jsonFormat3(EventSourceResponse)
     implicit val getEventSourcesRequestFormat = jsonFormat1(GetEventSourcesResponse)
 }

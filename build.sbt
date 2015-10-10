@@ -42,6 +42,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-slf4j" % versions.akka,
       "com.typesafe.akka" %% "akka-testkit" % versions.akka,
 
+      "org.reactivemongo" %% "reactivemongo" % "0.11.7",
       "io.spray"          %% "spray-can"       % versions.sprayVersion,
       "io.spray"          %% "spray-routing"   % versions.sprayVersion,
       "io.spray"          %% "spray-json"      % "1.3.1"

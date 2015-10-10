@@ -4,7 +4,7 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import java.util.UUID
+import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -22,7 +22,8 @@ object EventSourceManager {
     case class CreateEventSourceRequest(db: String, collections: List[String])
     case class CreateEventSourceResponse(id: String)
     case class GetEventSourcesRequest()
-    case class GetEventSourcesResponse(ids: List[String])
+    case class EventSourceResponse(id: String, db: String, collections: List[String])
+    case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
   }
 
   import Models._
@@ -42,7 +43,7 @@ class EventSourceManager (timeout: Timeout) extends Actor {
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
   def createSource(request: CreateEventSourceRequest): CreateEventSourceResponse = {
-    val id = UUID.randomUUID.toString.getBytes("UTF-8").mkString
+    val id = BSONObjectID.generate.stringify
     val eventSource = new EventSource(id, request.db, request.collections)
     eventSourceTable += ((id, eventSource))
 
@@ -55,8 +56,11 @@ class EventSourceManager (timeout: Timeout) extends Actor {
       sender() ! response
     }
     case request: GetEventSourcesRequest => {
-      val ids = eventSourceTable.toList.map(item => item._1)
-      val response = GetEventSourcesResponse(ids)
+      val eventSources = eventSourceTable.toList.map(item => {
+        val eventSource = item._2
+        EventSourceResponse(eventSource.id, eventSource.db, eventSource.collections)
+      })
+      val response = GetEventSourcesResponse(eventSources)
       sender() ! response
     }
   }
