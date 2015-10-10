@@ -1,8 +1,9 @@
 package io.github.xbay.yak
 
 /**
- * Created by triplex on 10/9/15.
+ * Created by uni.x.bell on 10/9/15.
  */
-class EventSource {
+
+class EventSource (id: String, db: String, collections: List[String]) {
 
 }
