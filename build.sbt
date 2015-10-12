@@ -4,7 +4,9 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.7"
 )
 
-resolvers += "Twitter" at "http://maven.twttr.com"
+resolvers ++= Seq(
+  "Twitter" at "http://maven.twttr.com",
+  "Typesafe Releases" at "http://dl.bintray.com/typesafe/maven-releases/")
 
 lazy val versions = new {
   val jodaTime = "2.8.2"
