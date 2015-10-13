@@ -36,8 +36,14 @@ trait RestRoutes extends HttpService
 
   def routes: Route = eventSourceRoute ~ eventSourcesRoute
 
-  def eventSourceRoute = pathPrefix("event_source") {
+  def eventSourcesRoute = pathPrefix("event_source") {
     pathEndOrSingleSlash {
+      get {
+        // GET /event_source
+        onSuccess(EventSourceManager.getEventSources()) { response =>
+          complete(OK, response)
+        }
+      } ~
       post {
         // POST /event_source
         entity(as[CreateEventSourceRequest]) { request =>
@@ -49,24 +55,12 @@ trait RestRoutes extends HttpService
     }
   }
 
-  def eventSourcesRoute = pathPrefix("event_sources") {
+  def eventSourceRoute = pathPrefix("event_source" / Segment) { eventSourceId =>
     pathEndOrSingleSlash {
-      get {
-        // GET /event_sources
-        onSuccess(EventSourceManager.getEventSources()) { response =>
-          complete(OK, response)
-        }
-      }
-    }
-  }
-
-  def deleteSourceRoute = pathPrefix("delete_event_source") {
-    pathEndOrSingleSlash {
+      // DELETE /event_source/:id
       delete {
-        entity(as[DeleteEventSourceRequest]) { request =>
-          onSuccess(EventSourceManager.deleteEventSource(request)) { response =>
-            complete(OK, response)
-          }
+        onSuccess(EventSourceManager.deleteEventSource(DeleteEventSourceRequest(eventSourceId))) { response =>
+          complete(OK, response)
         }
       }
     }
