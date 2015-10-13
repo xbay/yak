@@ -3,6 +3,7 @@ package io.github.xbay.yak
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+import akka.persistence._
 
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
@@ -19,11 +20,16 @@ object EventSourceManager {
   val managerActor = system.actorOf(Props(new EventSourceManager(timeout)), "manager")
 
   object Models {
+    //request or response
     case class CreateEventSourceRequest(db: String, collections: List[String])
     case class CreateEventSourceResponse(id: String)
     case class GetEventSourcesRequest()
     case class EventSourceResponse(id: String, db: String, collections: List[String])
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
+
+    //persist
+    case class EventSourcePersist(id: String, db: String, collections: List[String])
+    case class EventSourceTablePersist(table: Map[String, EventSource])
   }
 
   import Models._
@@ -37,23 +43,32 @@ object EventSourceManager {
   }
 }
 
-class EventSourceManager (timeout: Timeout) extends Actor {
+class EventSourceManager (timeout: Timeout) extends PersistentActor {
+  override def persistenceId = "event_source_manager"
+
   import EventSourceManager.Models._
+
 
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
-  def createSource(request: CreateEventSourceRequest): CreateEventSourceResponse = {
-    val id = BSONObjectID.generate.stringify
-    val eventSource = new EventSource(id, request.db, request.collections)
-    eventSourceTable += ((id, eventSource))
-
-    CreateEventSourceResponse(id)
-  }
-
-  def receive = {
+  def receiveCommand = {
     case request: CreateEventSourceRequest => {
-      val response = createSource(request)
-      sender() ! response
+      val id = BSONObjectID.generate.stringify
+      val eventSource = new EventSource(id, request.db, request.collections)
+      eventSourceTable += ((id, eventSource))
+      persistAsync(
+        /*EventSourceTablePersist(
+          eventSourceTable.toMap[String, EventSource]
+        )*/
+        EventSourcePersist(
+          id,
+          eventSource.db,
+          eventSource.collections
+        )
+      ) { e =>
+        val response = CreateEventSourceResponse(id)
+        sender() ! response
+      }
     }
     case request: GetEventSourcesRequest => {
       val eventSources = eventSourceTable.toList.map(item => {
@@ -62,6 +77,16 @@ class EventSourceManager (timeout: Timeout) extends Actor {
       })
       val response = GetEventSourcesResponse(eventSources)
       sender() ! response
+    }
+  }
+
+  def receiveRecover = {
+    case eventSourcePersist: EventSourcePersist => {
+      val eventSource = new EventSource(
+        eventSourcePersist.id,
+        eventSourcePersist.db,
+        eventSourcePersist.collections)
+      eventSourceTable += ((eventSource.id, eventSource))
     }
   }
 }

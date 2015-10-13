@@ -5,5 +5,5 @@ package io.github.xbay.yak
  */
 
 class EventSource (val id: String, val db: String, val collections: List[String]) {
-
+  var lastId: Option[String] = None
 }

@@ -4,6 +4,8 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.7"
 )
 
+fork := true
+
 resolvers += "Twitter" at "http://maven.twttr.com"
 
 lazy val versions = new {
@@ -35,6 +37,7 @@ lazy val root = (project in file(".")).
       "joda-time" % "joda-time" % versions.jodaTime,
 
       "com.typesafe.akka" %% "akka-actor" % versions.akka,
+      "com.typesafe.akka" %% "akka-persistence-experimental" % versions.akka,
       "com.typesafe.akka" %% "akka-contrib" % versions.akka,
       "com.typesafe.akka" %% "akka-agent" % versions.akka,
       "com.typesafe.akka" %% "akka-kernel" % versions.akka,
