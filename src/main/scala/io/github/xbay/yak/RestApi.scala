@@ -16,7 +16,7 @@ import spray.routing._
  * Created by uni.x.bell on 10/9/15.
  */
 class RestApi(timeout: Timeout) extends HttpServiceActor
-  with RestRoutes  {
+    with RestRoutes  {
 
   implicit val requestTimeout = timeout
 
@@ -26,7 +26,7 @@ class RestApi(timeout: Timeout) extends HttpServiceActor
 }
 
 trait RestRoutes extends HttpService
-  with ModelMarshalling {
+    with ModelMarshalling {
 
   import StatusCodes._
   import EventSourceManager.Models._
@@ -55,6 +55,18 @@ trait RestRoutes extends HttpService
         // GET /event_sources
         onSuccess(EventSourceManager.getEventSources()) { response =>
           complete(OK, response)
+        }
+      }
+    }
+  }
+
+  def deleteSourceRoute = pathPrefix("delete_event_source") {
+    pathEndOrSingleSlash {
+      delete {
+        entity(as[DeleteEventSourceRequest]) { request =>
+          onSuccess(EventSourceManager.deleteEventSource(request)) { response =>
+            complete(OK, response)
+          }
         }
       }
     }
