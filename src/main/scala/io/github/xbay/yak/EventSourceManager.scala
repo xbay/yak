@@ -50,20 +50,29 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
 
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
+  def snapshot() = {
+    saveSnapshot(EventSourceTablePersist((eventSourceTable.map{ item =>
+      val id = item._1
+      val eventSource = item._2
+      (id, EventSourcePersist(
+        eventSource.id,
+        eventSource.db,
+        eventSource.collections
+      ))
+    }).toMap))
+  }
+
+  def createEventSource(id: String, db: String, collections: List[String]): EventSource = {
+    val eventSource = new EventSource(id, db, collections)
+    eventSourceTable += ((id, eventSource))
+    eventSource
+  }
+
   def receiveCommand = {
     case request: CreateEventSourceRequest => {
       val id = BSONObjectID.generate.stringify
-      val eventSource = new EventSource(id, request.db, request.collections)
-      eventSourceTable += ((id, eventSource))
-      saveSnapshot(EventSourceTablePersist((eventSourceTable.map{ item =>
-        val id = item._1
-        val eventSource = item._2
-        (id, EventSourcePersist(
-          eventSource.id,
-          eventSource.db,
-          eventSource.collections
-        ))
-      }).toMap))
+      createEventSource(id, request.db, request.collections)
+      snapshot()
       sender() ! CreateEventSourceResponse(id)
     }
     case request: GetEventSourcesRequest => {
@@ -83,11 +92,7 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
       eventSourceTablePersist.table.map(item => {
         val id = item._1
         val eventSourcePersist = item._2
-        val eventSource = new EventSource(
-          eventSourcePersist.id,
-          eventSourcePersist.db,
-          eventSourcePersist.collections)
-        eventSourceTable += ((eventSource.id, eventSource))
+        createEventSource(eventSourcePersist.id, eventSourcePersist.db, eventSourcePersist.collections)
       })
     }
   }
