@@ -29,7 +29,7 @@ object EventSourceManager {
 
     //persist
     case class EventSourcePersist(id: String, db: String, collections: List[String])
-    case class EventSourceTablePersist(table: Map[String, EventSource])
+    case class EventSourceTablePersist(table: Map[String, EventSourcePersist])
   }
 
   import Models._
@@ -48,7 +48,6 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
 
   import EventSourceManager.Models._
 
-
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
   def receiveCommand = {
@@ -56,19 +55,16 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
       val id = BSONObjectID.generate.stringify
       val eventSource = new EventSource(id, request.db, request.collections)
       eventSourceTable += ((id, eventSource))
-      persistAsync(
-        /*EventSourceTablePersist(
-          eventSourceTable.toMap[String, EventSource]
-        )*/
-        EventSourcePersist(
-          id,
+      saveSnapshot(EventSourceTablePersist((eventSourceTable.map{ item =>
+        val id = item._1
+        val eventSource = item._2
+        (id, EventSourcePersist(
+          eventSource.id,
           eventSource.db,
           eventSource.collections
-        )
-      ) { e =>
-        val response = CreateEventSourceResponse(id)
-        sender() ! response
-      }
+        ))
+      }).toMap))
+      sender() ! CreateEventSourceResponse(id)
     }
     case request: GetEventSourcesRequest => {
       val eventSources = eventSourceTable.toList.map(item => {
@@ -78,15 +74,21 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
       val response = GetEventSourcesResponse(eventSources)
       sender() ! response
     }
+    case SaveSnapshotSuccess(metadata)         => // ...
+    case SaveSnapshotFailure(metadata, reason) => // ...
   }
 
   def receiveRecover = {
-    case eventSourcePersist: EventSourcePersist => {
-      val eventSource = new EventSource(
-        eventSourcePersist.id,
-        eventSourcePersist.db,
-        eventSourcePersist.collections)
-      eventSourceTable += ((eventSource.id, eventSource))
+    case SnapshotOffer(_, eventSourceTablePersist: EventSourceTablePersist) => {
+      eventSourceTablePersist.table.map(item => {
+        val id = item._1
+        val eventSourcePersist = item._2
+        val eventSource = new EventSource(
+          eventSourcePersist.id,
+          eventSourcePersist.db,
+          eventSourcePersist.collections)
+        eventSourceTable += ((eventSource.id, eventSource))
+      })
     }
   }
 }
