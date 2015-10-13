@@ -26,7 +26,7 @@ object EventSourceManager {
     case class GetEventSourcesRequest()
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
     case class DeleteEventSourceRequest(id: String)
-    case class DeleteEventSourceResponse(eventSources: List[EventSourceResponse])
+    case class DeleteEventSourceResponse(eventSource: Option[EventSourceResponse])
 
     //persist
     case class EventSourcePersist(id: String, db: String, collections: List[String])
@@ -64,7 +64,7 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
     }).toMap))
   }
 
-  private def eventSources: List[EventSourceResponse] =
+  private def eventSourcesList: List[EventSourceResponse] =
     eventSourceTable.map(item => {
       val eventSource = item._2
       EventSourceResponse(eventSource.id, eventSource.db, eventSource.collections)
@@ -84,14 +84,14 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
       sender ! CreateEventSourceResponse(id)
 
     case request: GetEventSourcesRequest =>
-      val response = GetEventSourcesResponse(eventSources)
+      val response = GetEventSourcesResponse(eventSourcesList)
       sender ! response
 
     case request: DeleteEventSourceRequest =>
       val id = request.id
       if(eventSourceTable.contains(id))
         eventSourceTable -= id
-      val response = DeleteEventSourceResponse(eventSources)
+      val response = DeleteEventSourceResponse(eventSourcesList.filter(item => item.id == id).headOption)
       sender ! response
 
     case SaveSnapshotSuccess(metadata)         => // ...
