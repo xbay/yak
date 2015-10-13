@@ -89,10 +89,16 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
 
     case request: DeleteEventSourceRequest =>
       val id = request.id
-      if(eventSourceTable.contains(id))
+      if(eventSourceTable.contains(id)) {
+        val eventSource = eventSourceTable.get(id).get
+        val response = DeleteEventSourceResponse(
+          Some(EventSourceResponse(id, eventSource.db, eventSource.collections)))
         eventSourceTable -= id
-      val response = DeleteEventSourceResponse(eventSourcesList.filter(item => item.id == id).headOption)
-      sender ! response
+        sender ! response
+      } else {
+        val response = DeleteEventSourceResponse(None)
+        sender ! response
+      }
 
     case SaveSnapshotSuccess(metadata)         => // ...
 
