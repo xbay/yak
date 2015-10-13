@@ -12,7 +12,6 @@ import scala.concurrent.duration._
 /**
  * Created by uni.x.bell on 10/9/15.
  */
-
 object EventSourceManager {
   implicit val system = ActorSystem("yak")
   val timeout = 10 seconds
@@ -23,9 +22,11 @@ object EventSourceManager {
     //request or response
     case class CreateEventSourceRequest(db: String, collections: List[String])
     case class CreateEventSourceResponse(id: String)
-    case class GetEventSourcesRequest()
     case class EventSourceResponse(id: String, db: String, collections: List[String])
+    case class GetEventSourcesRequest()
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
+    case class DeleteEventSourceRequest(id: String)
+    case class DeleteEventSourceResponse(eventSources: List[EventSourceResponse])
 
     //persist
     case class EventSourcePersist(id: String, db: String, collections: List[String])
@@ -34,13 +35,14 @@ object EventSourceManager {
 
   import Models._
 
-  def createEventSource(request: CreateEventSourceRequest): Future[CreateEventSourceResponse] = {
+  def createEventSource(request: CreateEventSourceRequest): Future[CreateEventSourceResponse] =
     managerActor.ask(request)(timeout).mapTo[CreateEventSourceResponse]
-  }
 
-  def getEventSources(): Future[GetEventSourcesResponse] = {
+  def getEventSources(): Future[GetEventSourcesResponse] =
     managerActor.ask(GetEventSourcesRequest())(timeout).mapTo[GetEventSourcesResponse]
-  }
+
+  def deleteEventSource(request: DeleteEventSourceRequest): Future[DeleteEventSourceResponse] =
+    (managerActor ? request)(timeout).mapTo[DeleteEventSourceResponse]
 }
 
 class EventSourceManager (timeout: Timeout) extends PersistentActor {
@@ -50,7 +52,7 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
 
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
-  def snapshot() = {
+  private def snapshot(): Unit = {
     saveSnapshot(EventSourceTablePersist((eventSourceTable.map{ item =>
       val id = item._1
       val eventSource = item._2
@@ -62,6 +64,12 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
     }).toMap))
   }
 
+  private def eventSources: List[EventSourceResponse] =
+    eventSourceTable.map(item => {
+      val eventSource = item._2
+      EventSourceResponse(eventSource.id, eventSource.db, eventSource.collections)
+    }).toList
+
   def createEventSource(id: String, db: String, collections: List[String]): EventSource = {
     val eventSource = new EventSource(id, db, collections)
     eventSourceTable += ((id, eventSource))
@@ -69,31 +77,34 @@ class EventSourceManager (timeout: Timeout) extends PersistentActor {
   }
 
   def receiveCommand = {
-    case request: CreateEventSourceRequest => {
+    case request: CreateEventSourceRequest =>
       val id = BSONObjectID.generate.stringify
       createEventSource(id, request.db, request.collections)
       snapshot()
-      sender() ! CreateEventSourceResponse(id)
-    }
-    case request: GetEventSourcesRequest => {
-      val eventSources = eventSourceTable.toList.map(item => {
-        val eventSource = item._2
-        EventSourceResponse(eventSource.id, eventSource.db, eventSource.collections)
-      })
+      sender ! CreateEventSourceResponse(id)
+
+    case request: GetEventSourcesRequest =>
       val response = GetEventSourcesResponse(eventSources)
-      sender() ! response
-    }
+      sender ! response
+
+    case request: DeleteEventSourceRequest =>
+      val id = request.id
+      if(eventSourceTable.contains(id))
+        eventSourceTable -= id
+      val response = DeleteEventSourceResponse(eventSources)
+      sender ! response
+
     case SaveSnapshotSuccess(metadata)         => // ...
+
     case SaveSnapshotFailure(metadata, reason) => // ...
   }
 
   def receiveRecover = {
-    case SnapshotOffer(_, eventSourceTablePersist: EventSourceTablePersist) => {
+    case SnapshotOffer(_, eventSourceTablePersist: EventSourceTablePersist) =>
       eventSourceTablePersist.table.map(item => {
         val id = item._1
         val eventSourcePersist = item._2
         createEventSource(eventSourcePersist.id, eventSourcePersist.db, eventSourcePersist.collections)
       })
-    }
   }
 }
