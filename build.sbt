@@ -6,7 +6,9 @@ lazy val commonSettings = Seq(
 
 fork := true
 
-resolvers += "Twitter" at "http://maven.twttr.com"
+resolvers ++= Seq(
+  "Twitter" at "http://maven.twttr.com",
+  "Typesafe Releases" at "http://dl.bintray.com/typesafe/maven-releases/")
 
 lazy val versions = new {
   val jodaTime = "2.8.2"
