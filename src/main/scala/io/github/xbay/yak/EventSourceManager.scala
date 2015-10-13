@@ -26,7 +26,7 @@ object EventSourceManager {
     case class GetEventSourcesRequest()
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
     case class DeleteEventSourceRequest(id: String)
-    case class DeleteEventSourceResponse(eventSource: Option[EventSourceResponse])
+    case class DeleteEventSourceResponse(success: Boolean, reason: String = "")
 
     //persist
     case class EventSourcePersist(id: String, db: String, collections: List[String])
@@ -90,14 +90,11 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
     case request: DeleteEventSourceRequest =>
       val id = request.id
       if(eventSourceTable.contains(id)) {
-        val eventSource = eventSourceTable.get(id).get
-        val response = DeleteEventSourceResponse(
-          Some(EventSourceResponse(id, eventSource.db, eventSource.collections)))
         eventSourceTable -= id
-        sender ! response
+        snapshot()
+        sender ! DeleteEventSourceResponse(true)
       } else {
-        val response = DeleteEventSourceResponse(None)
-        sender ! response
+        sender ! DeleteEventSourceResponse(false, "not exist")
       }
 
     case SaveSnapshotSuccess(metadata)         => // ...
