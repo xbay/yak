@@ -15,9 +15,9 @@ import scala.concurrent.duration._
 
 object EventSourceManager {
   implicit val system = ActorSystem("yak")
-  val timeout = 10 seconds
+  implicit val timeout = Timeout(10 seconds)
 
-  val managerActor = system.actorOf(Props(new EventSourceManager(timeout)), "manager")
+  val managerActor = system.actorOf(Props(new EventSourceManager()), "manager")
 
   object Models {
     //request or response
@@ -35,15 +35,15 @@ object EventSourceManager {
   import Models._
 
   def createEventSource(request: CreateEventSourceRequest): Future[CreateEventSourceResponse] = {
-    managerActor.ask(request)(timeout).mapTo[CreateEventSourceResponse]
+    managerActor.ask(request).mapTo[CreateEventSourceResponse]
   }
 
   def getEventSources(): Future[GetEventSourcesResponse] = {
-    managerActor.ask(GetEventSourcesRequest())(timeout).mapTo[GetEventSourcesResponse]
+    managerActor.ask(GetEventSourcesRequest()).mapTo[GetEventSourcesResponse]
   }
 }
 
-class EventSourceManager (timeout: Timeout) extends PersistentActor {
+class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
   override def persistenceId = "event_source_manager"
 
   import EventSourceManager.Models._
