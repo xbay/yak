@@ -59,7 +59,9 @@ trait RestRoutes extends HttpService
     pathEndOrSingleSlash {
       delete {
         // DELETE /event_source/:id
-        onSuccess(EventSourceManager.deleteEventSource(DeleteEventSourceRequest(eventSourceId))) { response =>
+        onSuccess(
+          EventSourceManager.deleteEventSource(
+            DeleteEventSourceRequest(eventSourceId))) { response =>
           complete(OK, response)
         }
       }
