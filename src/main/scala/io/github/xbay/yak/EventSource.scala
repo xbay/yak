@@ -29,9 +29,9 @@ class EventSourceActor (val id: String)
                        (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
   override def persistenceId = "event-source-" + id
 
-  val actors = collection.mutable.Map[String, EventSource]()
-  val events = collection.mutable.MutableList[Event]()
+  var events = List[Event]()
   var state = EventSourceActorState(None, "boostrap")
+  val actors = collection.mutable.Map[String, EventReader]()
 
   private def snapshot(): Unit = saveSnapshot(state)
 
