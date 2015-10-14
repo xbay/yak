@@ -23,11 +23,11 @@ class OplogReader(id: String, db: String, collection: String)
     "bootstrap-reader-" + id)
 
   def pause() = {
-
+    actor ! "pause"
   }
 
   def resume() = {
-
+    actor ! "resume"
   }
 }
 
