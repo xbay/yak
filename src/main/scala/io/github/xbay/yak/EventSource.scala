@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 
 class EventSource (val id: String, val db: String, val collections: List[String])
                   (implicit system: ActorSystem, timeout: Timeout) {
-  val actor = system.actorOf(Props(new EventSourceActor(id)), "event-source-" + id)
+  val actor = system.actorOf(Props(new EventSourceActor(id, db, collections)), "event-source-" + id)
 }
 
 case class EventFetch()
@@ -25,13 +25,16 @@ case class EventFill()
 case class Event(id: String, collection: String, op: String)
 case class EventSourceActorState(recentRecordId: Option[String], stage: String)
 
-class EventSourceActor (val id: String)
+class EventSourceActor (val id: String, db: String, collections: List[String])
                        (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
   override def persistenceId = "event-source-" + id
 
   var events = List[Event]()
   var state = EventSourceActorState(None, "boostrap")
-  val actors = collection.mutable.Map[String, EventReader]()
+  val bootstrapReaders = collections.map(collection =>
+    Tuple2(id, new BootstrapReader(id, db, collection))
+  ).toMap[String, BootstrapReader]
+  val oplogReader = new OplogReader(id, db, collections)
 
   private def snapshot(): Unit = saveSnapshot(state)
 

@@ -53,7 +53,7 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
   private def snapshot(): Unit = {
-    saveSnapshot(EventSourceTablePersist((eventSourceTable.map{ item =>
+    saveSnapshot(EventSourceTablePersist(eventSourceTable.map{ item =>
       val id = item._1
       val eventSource = item._2
       (id, EventSourcePersist(
@@ -61,7 +61,7 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
         eventSource.db,
         eventSource.collections
       ))
-    }).toMap))
+    }.toMap))
   }
 
   private def eventSourcesList: List[EventSourceResponse] =

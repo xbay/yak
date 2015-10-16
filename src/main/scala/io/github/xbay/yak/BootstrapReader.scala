@@ -16,15 +16,11 @@ import scala.concurrent.duration._
  * Created by uni.x.bell on 10/14/15.
  */
 
-class BoostrapReader(id: String, db: String, collection: String)
-                    (implicit val system: ActorSystem, val timeout: Timeout)  extends EventReader {
+class BootstrapReader(id: String, db: String, collection: String)
+                    (implicit val system: ActorSystem, val timeout: Timeout) {
   val actor = system.actorOf(
     Props(new BootstrapReaderActor(db, collection)),
     "bootstrap-reader-" + id)
-
-  def pause() = {
-    actor ! "pause"
-  }
 
   def resume() = {
     actor ! "resume"
@@ -32,7 +28,6 @@ class BoostrapReader(id: String, db: String, collection: String)
 }
 
 class BootstrapReaderActor(val dbName: String, val collectionName: String) extends Actor {
-  var state = "pause"
   val collection = connect()
 
   def connect(): BSONCollection = {
@@ -43,9 +38,7 @@ class BootstrapReaderActor(val dbName: String, val collectionName: String) exten
   }
 
   def receive  = {
-    case "pause" => state = "pause"
     case "resume" => {
-      state = "resume"
     }
   }
 }

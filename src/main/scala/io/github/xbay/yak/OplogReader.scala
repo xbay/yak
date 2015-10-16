@@ -16,10 +16,10 @@ import scala.concurrent.duration._
  * Created by uni.x.bell on 10/14/15.
  */
 
-class OplogReader(id: String, db: String, collection: String)
-                 (implicit val system: ActorSystem, val timeout: Timeout) extends EventReader {
+class OplogReader(id: String, db: String, collections: List[String])
+                 (implicit val system: ActorSystem, val timeout: Timeout) {
   val actor = system.actorOf(
-    Props(new OplogReaderActor(db, collection)),
+    Props(new OplogReaderActor(db, collections)),
     "bootstrap-reader-" + id)
 
   def pause() = {
@@ -31,7 +31,7 @@ class OplogReader(id: String, db: String, collection: String)
   }
 }
 
-class OplogReaderActor(val dbName: String, val collectionName: String) extends Actor {
+class OplogReaderActor(val dbName: String, val collectionNames: List[String]) extends Actor {
   var state = "pause"
   val collection = connect()
 
