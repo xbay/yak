@@ -1,13 +1,8 @@
 package io.github.xbay.yak
 
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-
-import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-
+import scala.concurrent.{ExecutionContext, Future}
 import spray.http.StatusCodes
 import spray.httpx.SprayJsonSupport._
 import spray.routing._

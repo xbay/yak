@@ -1,21 +1,15 @@
 package io.github.xbay.yak
 
-import reactivemongo.api._
-import reactivemongo.bson._
-import reactivemongo.api.collections.bson.BSONCollection
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import akka.actor._
+import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import reactivemongo.api.MongoDriver
+import reactivemongo.api.collections.bson.BSONCollection
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by uni.x.bell on 10/14/15.
  */
-
 class OplogReader(id: String, db: String, collections: List[String])
                  (implicit val system: ActorSystem, val timeout: Timeout) {
   val actor = system.actorOf(

@@ -1,12 +1,10 @@
 package io.github.xbay.yak
 
-import akka.actor.{ ActorSystem , Actor, Props }
+import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-
-import com.typesafe.config.{ Config, ConfigFactory }
-
+import com.typesafe.config.{Config, ConfigFactory}
 import spray.can.Http
 
 /**

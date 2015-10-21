@@ -1,10 +1,9 @@
 package io.github.xbay.yak
 
-import akka.actor._
+import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
+import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 import akka.util.Timeout
-import akka.persistence._
-
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,7 +22,7 @@ object EventSourceManager {
     case class CreateEventSourceRequest(db: String, collections: List[String])
     case class CreateEventSourceResponse(id: String)
     case class EventSourceResponse(id: String, db: String, collections: List[String])
-    case class GetEventSourcesRequest()
+    case object GetEventSourcesRequest
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
     case class DeleteEventSourceRequest(id: String)
     case class DeleteEventSourceResponse(success: Boolean, reason: String = "")
@@ -39,7 +38,7 @@ object EventSourceManager {
     managerActor.ask(request).mapTo[CreateEventSourceResponse]
 
   def getEventSources(): Future[GetEventSourcesResponse] =
-    managerActor.ask(GetEventSourcesRequest()).mapTo[GetEventSourcesResponse]
+    managerActor.ask(GetEventSourcesRequest).mapTo[GetEventSourcesResponse]
 
   def deleteEventSource(request: DeleteEventSourceRequest): Future[DeleteEventSourceResponse] =
     (managerActor ? request).mapTo[DeleteEventSourceResponse]
@@ -83,7 +82,7 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
       snapshot()
       sender ! CreateEventSourceResponse(id)
 
-    case request: GetEventSourcesRequest =>
+    case GetEventSourcesRequest =>
       val response = GetEventSourcesResponse(eventSourcesList)
       sender ! response
 
@@ -97,7 +96,7 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
         sender ! DeleteEventSourceResponse(false, "not exist")
       }
 
-    case SaveSnapshotSuccess(metadata)         => // ...
+    case SaveSnapshotSuccess(metadata) => // ...
 
     case SaveSnapshotFailure(metadata, reason) => // ...
   }
