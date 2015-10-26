@@ -27,7 +27,7 @@ class BootstrapReader(id: String, db: String, collection: String)
                      (implicit val system: ActorSystem, val timeout: Timeout) {
   val actor = system.actorOf(
     Props(new BootstrapReaderActor(db, collection)),
-    "bootstrap-reader-" + id)
+    "bootstrap-reader-" + id + "-" + collection)
 
   def resume(id: Option[String]) = {
     actor ! Resume(id.getOrElse("0" * 24))

@@ -7,6 +7,7 @@ import spray.json.DefaultJsonProtocol
  */
 trait ModelMarshalling extends DefaultJsonProtocol {
   import EventSourceManager.Models._
+  import EventSource.Models._
 
   implicit val createEventSourceReqeustFormat = jsonFormat2(CreateEventSourceRequest)
   implicit val createEventSourceResponseFormat = jsonFormat1(CreateEventSourceResponse)
@@ -14,4 +15,7 @@ trait ModelMarshalling extends DefaultJsonProtocol {
   implicit val getEventSourcesRequestFormat = jsonFormat1(GetEventSourcesResponse)
   implicit val deleteEventSourceRequest = jsonFormat1(DeleteEventSourceRequest)
   implicit val deleteEVentSourceResponse = jsonFormat2(DeleteEventSourceResponse)
+  implicit val event = jsonFormat3(Event)
+  implicit val eventFetchRequest = jsonFormat2(EventFetchRequest)
+  implicit val eventFetchResponse = jsonFormat1(EventFetchResponse)
 }

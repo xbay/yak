@@ -6,6 +6,7 @@ import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSucce
 import akka.util.Timeout
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 /**
@@ -33,6 +34,7 @@ object EventSourceManager {
   }
 
   import Models._
+  import EventSource.Models._
 
   def createEventSource(request: CreateEventSourceRequest): Future[CreateEventSourceResponse] =
     managerActor.ask(request).mapTo[CreateEventSourceResponse]
@@ -42,12 +44,16 @@ object EventSourceManager {
 
   def deleteEventSource(request: DeleteEventSourceRequest): Future[DeleteEventSourceResponse] =
     (managerActor ? request).mapTo[DeleteEventSourceResponse]
+
+  def fetchEvents(request: EventFetchRequest): Future[EventFetchResponse] =
+    managerActor.ask(EventFetchRequest).mapTo[EventFetchResponse]
 }
 
 class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
   override def persistenceId = "event_source_manager"
 
   import EventSourceManager.Models._
+  import EventSource.Models._
 
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
@@ -85,6 +91,12 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
     case GetEventSourcesRequest =>
       val response = GetEventSourcesResponse(eventSourcesList)
       sender ! response
+
+    case req: EventFetchRequest =>
+      val eventSource = eventSourceTable.get(req.id).get
+      eventSource.fetch(req) map { res =>
+        sender ! res
+      }
 
     case request: DeleteEventSourceRequest =>
       val id = request.id

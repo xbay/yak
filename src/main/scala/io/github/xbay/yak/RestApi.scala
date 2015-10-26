@@ -25,6 +25,7 @@ trait RestRoutes extends HttpService
 
   import StatusCodes._
   import EventSourceManager.Models._
+  import EventSource.Models._
 
   implicit def executionContext: ExecutionContext
   implicit def requestTimeout: Timeout
@@ -70,6 +71,13 @@ trait RestRoutes extends HttpService
         onSuccess(
           EventSourceManager.deleteEventSource(
             DeleteEventSourceRequest(eventSourceId))) { response =>
+          complete(OK, response)
+        }
+      } ~
+      get {
+        // GET /event_source/:id/events
+        onSuccess(
+          EventSourceManager.fetchEvents(EventFetchRequest(eventSourceId, 100))) { response =>
           complete(OK, response)
         }
       }

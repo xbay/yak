@@ -14,61 +14,62 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class EventSource(val id: String, val db: String, val collections: List[String])
                  (implicit system: ActorSystem, timeout: Timeout) {
+  import EventSource.Models._
   val actor = system.actorOf(Props(new EventSourceActor(id, db, collections)), "event-source-" + id)
 
-  def fetch(size: Int): Future[List[Event]] = {
-    actor.ask(EventFetchRequest(size)).mapTo[EventFetchResponse].map(_.events)
+  def fetch(req: EventFetchRequest): Future[EventFetchResponse] = {
+    actor.ask(req).mapTo[EventFetchResponse]
   }
 
-  def expunge(size: Int): Future[Int] = {
-    actor.ask(EventExpungeRequest(size)).mapTo[EventExpungeResponse].map(_.size)
+  def expunge(req: EventExpungeRequest): Future[EventExpungeResponse] = {
+    actor.ask(req).mapTo[EventExpungeResponse]
   }
 }
 
-case class EventFetchRequest(size: Int)
-case class EventFetchResponse(events: List[Event])
+object EventSource {
+  object Models {
+    case class EventFetchRequest(id: String, size: Int)
+    case class EventFetchResponse(events: List[Event])
 
-case class EventExpungeRequest(size: Int)
-case class EventExpungeResponse(size: Int)
-
+    case class EventExpungeRequest(id: String, size: Int)
+    case class EventExpungeResponse(size: Int)
+  }
+}
 case class EventFill(ids: List[String], collection: String)
 
 case class Event(id: String, collection: String, op: String)
 
-case class BootstrapReaderState(id: String, recentRecordId: String, finished: Boolean)
+case class BootstrapReaderState(id: String, collection: String, recentRecordId: Option[String], finished: Boolean)
 case class OplogReaderState(id: String, recentRecordId: String)
-case class EventSourceActorState(
-  bootstrapActorStates: Map[String, BootstrapReaderState],
+case class EventSourceReaderState(bootstrapReaderStates: Map[String, BootstrapReaderState],
   oplogReaderState: OplogReaderState,
   stage: String)
 
 class EventSourceActor(val id: String, db: String, collections: List[String])
                       (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
+  import EventSource.Models._
   override def persistenceId = "event-source-" + id
 
   var events = List[Event]()
-  var state = EventSourceActorState(
+  var state = EventSourceReaderState(
     collections.map(collection =>
-      Tuple2(collection, new BootstrapReaderState(id, collection, false))
+      Tuple2(collection, new BootstrapReaderState(id, collection, None, false))
     ).toMap[String, BootstrapReaderState],
     OplogReaderState(id, ""),
     "boostrap")
-  var bootstrapReaders: List[BootstrapReader] = List()
-  /* collections.map(collection =>
-    Tuple2(id, new BootstrapReader(id, db, collection))
-  ).toMap[String, BootstrapReader]*/
-  var oplogReader:Option[OplogReader] = None//new OplogReader(id, db, collections)
 
-  def bootstrapReaderFromState() = {
+  val bootstrapReaders = collections.map(collection =>
+    Tuple2(collection, new BootstrapReader(id, db, collection))
+  ).toMap[String, BootstrapReader]
 
-  }
+  var oplogReader = new OplogReader(id, db, collections)
 
   private def snapshot(): Unit = saveSnapshot(state)
 
   def receiveCommand = {
-    case EventFetchRequest(size) =>
+    case EventFetchRequest(_, size) =>
       sender() ! EventFetchResponse(events.take(size))
-    case EventExpungeRequest(size) =>
+    case EventExpungeRequest(_, size) =>
       val res = events.splitAt(size)
       events = res._2
       sender() ! EventExpungeResponse(res._1.size)
@@ -81,6 +82,21 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
   }
 
   def receiveRecover = {
-    case SnapshotOffer(_, stateRecover: EventSourceActorState) => state = stateRecover
+    case SnapshotOffer(_, stateRecover: EventSourceReaderState) => state = stateRecover
+  }
+
+  def recoveryCompleted(): Unit = {
+    println("resume logs")
+    state.stage match {
+      case "bootstrap" => {
+        state.bootstrapReaderStates.foreach { st =>
+          val readerState = st._2
+          bootstrapReaders.get(readerState.collection).get.resume(readerState.recentRecordId)
+        }
+      }
+      case _ => {
+
+      }
+    }
   }
 }
