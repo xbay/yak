@@ -62,4 +62,17 @@ trait RestRoutes extends HttpService
       }
     }
   }
+
+  def eventSourceOpRoute = pathPrefix("event_source" / Segment / "events") { eventSourceId =>
+    pathEndOrSingleSlash {
+      delete {
+        // DELETE /event_source/:id/events
+        onSuccess(
+          EventSourceManager.deleteEventSource(
+            DeleteEventSourceRequest(eventSourceId))) { response =>
+          complete(OK, response)
+        }
+      }
+    }
+  }
 }
