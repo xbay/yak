@@ -82,7 +82,9 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
   }
 
   def receiveRecover = {
-    case SnapshotOffer(_, stateRecover: EventSourceReaderState) => state = stateRecover
+    case SnapshotOffer(_, stateRecover: EventSourceReaderState) =>
+      println("eventsource recovery")
+      state = stateRecover
   }
 
   def recoveryCompleted(): Unit = {

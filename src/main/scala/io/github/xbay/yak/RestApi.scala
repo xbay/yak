@@ -30,7 +30,7 @@ trait RestRoutes extends HttpService
   implicit def executionContext: ExecutionContext
   implicit def requestTimeout: Timeout
 
-  def routes: Route = eventSourceRoute ~ eventSourcesRoute
+  def routes: Route = eventSourceRoute ~ eventSourcesRoute ~ eventSourceOpRoute
 
   def eventSourcesRoute = pathPrefix("event_source") {
     pathEndOrSingleSlash {
