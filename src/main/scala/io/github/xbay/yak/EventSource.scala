@@ -3,7 +3,7 @@ package io.github.xbay.yak
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.persistence
-import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
+import akka.persistence._
 import akka.util.Timeout
 
 import scala.concurrent.Future
@@ -68,6 +68,7 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
   def receiveCommand = {
     case EventFetchRequest(_, size) =>
+      println("fetch from EventSource")
       sender() ! EventFetchResponse(events.take(size))
     case EventExpungeRequest(_, size) =>
       val res = events.splitAt(size)
@@ -79,6 +80,8 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
     case SaveSnapshotSuccess(metadata) => // ...
 
     case SaveSnapshotFailure(metadata, reason) => // ...
+
+    case RecoveryCompleted => recoveryCompleted()
   }
 
   def receiveRecover = {
@@ -100,5 +103,10 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
       }
     }
+  }
+
+  override def preStart() {
+    println("pre start")
+    self ! Recover()
   }
 }

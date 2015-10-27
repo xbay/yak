@@ -45,8 +45,9 @@ object EventSourceManager {
   def deleteEventSource(request: DeleteEventSourceRequest): Future[DeleteEventSourceResponse] =
     (managerActor ? request).mapTo[DeleteEventSourceResponse]
 
-  def fetchEvents(request: EventFetchRequest): Future[EventFetchResponse] =
-    managerActor.ask(EventFetchRequest).mapTo[EventFetchResponse]
+  def fetchEvents(request: EventFetchRequest): Future[EventFetchResponse] = {
+    managerActor.ask(request).mapTo[EventFetchResponse]
+  }
 }
 
 class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
@@ -92,12 +93,6 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
       val response = GetEventSourcesResponse(eventSourcesList)
       sender ! response
 
-    case req: EventFetchRequest =>
-      val eventSource = eventSourceTable.get(req.id).get
-      eventSource.fetch(req) map { res =>
-        sender ! res
-      }
-
     case request: DeleteEventSourceRequest =>
       val id = request.id
       if(eventSourceTable.contains(id)) {
@@ -106,6 +101,13 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
         sender ! DeleteEventSourceResponse(true)
       } else {
         sender ! DeleteEventSourceResponse(false, "not exist")
+      }
+
+    case request: EventFetchRequest =>
+      val eventSource = eventSourceTable.get(request.id).get
+      val s = sender()
+      eventSource.fetch(request) map { res =>
+        s ! res
       }
 
     case SaveSnapshotSuccess(metadata) => // ...
