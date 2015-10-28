@@ -2,7 +2,7 @@ package io.github.xbay.yak
 
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
-import akka.persistence.{PersistentActor, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
+import akka.persistence._
 import akka.util.Timeout
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
@@ -47,6 +47,10 @@ object EventSourceManager {
 
   def fetchEvents(request: EventFetchRequest): Future[EventFetchResponse] = {
     managerActor.ask(request).mapTo[EventFetchResponse]
+  }
+
+  def expungeEvents(request: EventExpungeRequest): Future[EventExpungeResponse] = {
+    managerActor.ask(request).mapTo[EventExpungeResponse]
   }
 }
 
@@ -110,9 +114,17 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
         s ! res
       }
 
+    case request: EventExpungeRequest =>
+      val eventSource = eventSourceTable.get(request.id).get
+      val s = sender()
+      eventSource.expunge(request) map { res =>
+        s ! res
+      }
+
     case SaveSnapshotSuccess(metadata) => // ...
 
     case SaveSnapshotFailure(metadata, reason) => // ...
+
   }
 
   def receiveRecover = {
@@ -122,5 +134,6 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
         val eventSourcePersist = item._2
         createEventSource(eventSourcePersist.id, eventSourcePersist.db, eventSourcePersist.collections)
       })
+    case RecoveryCompleted => //
   }
 }

@@ -64,20 +64,21 @@ trait RestRoutes extends HttpService
     }
   }
 
-  def eventSourceOpRoute = pathPrefix("event_source" / Segment / "events") { eventSourceId =>
+  def eventSourceOpRoute = pathPrefix("event_source" / Segment / "events" / Segment) { (eventSourceId, count) =>
     pathEndOrSingleSlash {
       delete {
         // DELETE /event_source/:id/events
         onSuccess(
-          EventSourceManager.deleteEventSource(
-            DeleteEventSourceRequest(eventSourceId))) { response =>
+          EventSourceManager.expungeEvents(
+            EventExpungeRequest(eventSourceId, count.toInt))) { response =>
           complete(OK, response)
         }
       } ~
       get {
         // GET /event_source/:id/events
         onSuccess(
-          EventSourceManager.fetchEvents(EventFetchRequest(eventSourceId, 100))) { response =>
+          EventSourceManager.fetchEvents(
+            EventFetchRequest(eventSourceId, count.toInt))) { response =>
           complete(OK, response)
         }
       }

@@ -1,8 +1,7 @@
 package io.github.xbay.yak
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorContext, ActorSystem, Props}
 import akka.pattern.ask
-import akka.persistence
 import akka.persistence._
 import akka.util.Timeout
 
@@ -13,9 +12,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Created by uni.x.bell on 10/9/15.
  */
 class EventSource(val id: String, val db: String, val collections: List[String])
-                 (implicit system: ActorSystem, timeout: Timeout) {
+                 (implicit system: ActorSystem, context: ActorContext, timeout: Timeout) {
   import EventSource.Models._
-  val actor = system.actorOf(Props(new EventSourceActor(id, db, collections)), "event-source-" + id)
+  val actor = context.actorOf(Props(new EventSourceActor(id, db, collections)), "event-source-" + id)
 
   def fetch(req: EventFetchRequest): Future[EventFetchResponse] = {
     actor.ask(req).mapTo[EventFetchResponse]
@@ -50,13 +49,15 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
   import EventSource.Models._
   override def persistenceId = "event-source-" + id
 
+  val THRESHHOLD = 100
+
   var events = List[Event]()
   var state = EventSourceReaderState(
     collections.map(collection =>
       Tuple2(collection, new BootstrapReaderState(id, collection, None, false))
     ).toMap[String, BootstrapReaderState],
     OplogReaderState(id, ""),
-    "boostrap")
+    "bootstrap")
 
   val bootstrapReaders = collections.map(collection =>
     Tuple2(collection, new BootstrapReader(id, db, collection))
@@ -68,30 +69,32 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
   def receiveCommand = {
     case EventFetchRequest(_, size) =>
-      println("fetch from EventSource")
       sender() ! EventFetchResponse(events.take(size))
+
     case EventExpungeRequest(_, size) =>
       val res = events.splitAt(size)
       events = res._2
       sender() ! EventExpungeResponse(res._1.size)
+      tryFillData()
+
     case EventFill(ids, collection) =>
+      println("event fill")
       events = events ++ ids.map(Event(_, collection, "create"))
 
     case SaveSnapshotSuccess(metadata) => // ...
 
     case SaveSnapshotFailure(metadata, reason) => // ...
 
-    case RecoveryCompleted => recoveryCompleted()
   }
 
   def receiveRecover = {
     case SnapshotOffer(_, stateRecover: EventSourceReaderState) =>
-      println("eventsource recovery")
       state = stateRecover
+
+    case RecoveryCompleted => tryFillData()
   }
 
-  def recoveryCompleted(): Unit = {
-    println("resume logs")
+  def tryFillData(): Unit = {
     state.stage match {
       case "bootstrap" => {
         state.bootstrapReaderStates.foreach { st =>
@@ -103,10 +106,5 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
       }
     }
-  }
-
-  override def preStart() {
-    println("pre start")
-    self ! Recover()
   }
 }

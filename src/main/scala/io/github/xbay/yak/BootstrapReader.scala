@@ -24,8 +24,8 @@ object BootstrapResultModel {
  * Created by uni.x.bell on 10/14/15.
  */
 class BootstrapReader(id: String, db: String, collection: String)
-                     (implicit val system: ActorSystem, val timeout: Timeout) {
-  val actor = system.actorOf(
+                     (implicit system: ActorSystem, context: ActorContext, val timeout: Timeout) {
+  val actor = context.actorOf(
     Props(new BootstrapReaderActor(db, collection)),
     "bootstrap-reader-" + id + "-" + collection)
 
@@ -44,15 +44,19 @@ class BootstrapReaderActor(val dbName: String, val collectionName: String) exten
     db[BSONCollection](collectionName)
   }
 
-  def receive  = {
+  def receive = {
     case Resume(id) =>
+      val parent = context.parent
+      println("resume")
       collection
         .find(BSONDocument(  //query
             "_id" -> BSONDocument("$gt" -> BSONObjectID(id))),
           BSONDocument("_id" -> 1)) //field filter
         .cursor[BootstrapResultModel]()
         .collect[List](100).map{ids =>
-        sender() ! EventFill(ids.map(_.id), collectionName)
+        println(ids.size)
+        println(parent.path)
+        parent ! EventFill(ids.map(_.id), collectionName)
       }
   }
 }
