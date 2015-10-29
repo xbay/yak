@@ -11,12 +11,15 @@ resolvers ++= Seq(
   "Typesafe Releases" at "http://dl.bintray.com/typesafe/maven-releases/")
 
 lazy val versions = new {
-  val jodaTime = "2.8.2"
+  val jodaTime = "2.9"
+  val jodaConvert = "1.8.1"
   val logback = "1.1.3"
   val scalaz = "7.1.3"
   val specs2 = "2.4.17"
   val sprayVersion = "1.3.3"
+  val sprayJsonVersion = "1.3.2"
   val akka = "2.3.13"
+  val reactivemongo = "0.11.7"
 }
 
 assemblyMergeStrategy in assembly := {
@@ -37,6 +40,7 @@ lazy val root = (project in file(".")).
       "org.specs2" %% "specs2-core" % versions.specs2 % "test",
       "ch.qos.logback" % "logback-classic" % versions.logback,
       "joda-time" % "joda-time" % versions.jodaTime,
+      "org.joda" % "joda-convert" % versions.jodaConvert,
 
       "com.typesafe.akka" %% "akka-actor" % versions.akka,
       "com.typesafe.akka" %% "akka-persistence-experimental" % versions.akka,
@@ -47,10 +51,10 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-slf4j" % versions.akka,
       "com.typesafe.akka" %% "akka-testkit" % versions.akka,
 
-      "org.reactivemongo" %% "reactivemongo" % "0.11.7",
+      "org.reactivemongo" %% "reactivemongo" % versions.reactivemongo,
       "io.spray" %% "spray-can" % versions.sprayVersion,
       "io.spray" %% "spray-routing" % versions.sprayVersion,
       "io.spray" %% "spray-testkit" % versions.sprayVersion % "test" exclude("org.specs2", "specs2_2.11"),
-      "io.spray" %% "spray-json" % "1.3.1"
+      "io.spray" %% "spray-json" % versions.sprayJsonVersion
     )
   )
