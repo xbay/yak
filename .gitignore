@@ -11,6 +11,8 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+project/project
+project/target
 
 # Scala-IDE specific
 .scala_dependencies
@@ -27,5 +29,5 @@ projectFilesBackup/
 .ensime_cache/
 
 # Akka persistence specific
-journal/*
-snapshots/*
+journal/
+snapshots/
