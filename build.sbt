@@ -14,7 +14,7 @@ lazy val versions = new {
   val jodaTime = "2.8.2"
   val logback = "1.1.3"
   val scalaz = "7.1.3"
-  val spec2 = "3.6.4"
+  val specs2 = "2.4.17"
   val sprayVersion = "1.3.3"
   val akka = "2.3.13"
 }
@@ -34,7 +34,7 @@ lazy val root = (project in file(".")).
     name := "yak",
     libraryDependencies ++= Seq(
       "org.scalaz" %% "scalaz-core" % versions.scalaz,
-      "org.specs2" %% "specs2-core" % versions.spec2 % "test",
+      "org.specs2" %% "specs2-core" % versions.specs2 % "test",
       "ch.qos.logback" % "logback-classic" % versions.logback,
       "joda-time" % "joda-time" % versions.jodaTime,
 
@@ -48,8 +48,9 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-testkit" % versions.akka,
 
       "org.reactivemongo" %% "reactivemongo" % "0.11.7",
-      "io.spray"          %% "spray-can"       % versions.sprayVersion,
-      "io.spray"          %% "spray-routing"   % versions.sprayVersion,
-      "io.spray"          %% "spray-json"      % "1.3.1"
+      "io.spray" %% "spray-can" % versions.sprayVersion,
+      "io.spray" %% "spray-routing" % versions.sprayVersion,
+      "io.spray" %% "spray-testkit" % versions.sprayVersion % "test" exclude("org.specs2", "specs2_2.11"),
+      "io.spray" %% "spray-json" % "1.3.1"
     )
   )
