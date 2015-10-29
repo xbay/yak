@@ -18,6 +18,8 @@ project/plugins/project/
 
 # Intellij IDEA specific
 .idea/
+.idea_modules/
+projectFilesBackup/
 *.iml
 
 # ensime specific
