@@ -24,8 +24,8 @@ trait RestRoutes extends HttpService
     with ModelMarshalling {
 
   import StatusCodes._
-  import EventSourceManager.Models._
-  import EventSource.Models._
+  import EventSourceManager.Messages._
+  import EventSource.Messages._
 
   implicit def executionContext: ExecutionContext
   implicit def requestTimeout: Timeout
@@ -36,7 +36,7 @@ trait RestRoutes extends HttpService
     pathEndOrSingleSlash {
       get {
         // GET /event_source
-        onSuccess(EventSourceManager.getEventSources()) { response =>
+        onSuccess(EventSourceManager.getEventSources) { response =>
           complete(OK, response)
         }
       } ~

@@ -18,7 +18,7 @@ object EventSourceManager {
 
   val managerActor = system.actorOf(Props(new EventSourceManager()), "manager")
 
-  object Models {
+  object Messages {
     //request or response
     case class CreateEventSourceRequest(db: String, collections: List[String])
     case class CreateEventSourceResponse(id: String)
@@ -27,19 +27,21 @@ object EventSourceManager {
     case class GetEventSourcesResponse(eventSources: List[EventSourceResponse])
     case class DeleteEventSourceRequest(id: String)
     case class DeleteEventSourceResponse(success: Boolean, reason: String = "")
+  }
 
+  object Models {
     //persist
     case class EventSourcePersist(id: String, db: String, collections: List[String])
     case class EventSourceTablePersist(table: Map[String, EventSourcePersist])
   }
 
-  import Models._
-  import EventSource.Models._
+  import Messages._
+  import EventSource.Messages._
 
   def createEventSource(request: CreateEventSourceRequest): Future[CreateEventSourceResponse] =
     managerActor.ask(request).mapTo[CreateEventSourceResponse]
 
-  def getEventSources(): Future[GetEventSourcesResponse] =
+  def getEventSources: Future[GetEventSourcesResponse] =
     managerActor.ask(GetEventSourcesRequest).mapTo[GetEventSourcesResponse]
 
   def deleteEventSource(request: DeleteEventSourceRequest): Future[DeleteEventSourceResponse] =
@@ -57,8 +59,9 @@ object EventSourceManager {
 class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
   override def persistenceId = "event_source_manager"
 
+  import EventSourceManager.Messages._
   import EventSourceManager.Models._
-  import EventSource.Models._
+  import EventSource.Messages._
 
   private val eventSourceTable = collection.mutable.Map[String, EventSource]()
 
@@ -75,10 +78,10 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
   }
 
   private def eventSourcesList: List[EventSourceResponse] =
-    eventSourceTable.map(item => {
+    eventSourceTable.map { item =>
       val eventSource = item._2
       EventSourceResponse(eventSource.id, eventSource.db, eventSource.collections)
-    }).toList
+    }.toList
 
   def createEventSource(id: String, db: String, collections: List[String]): EventSource = {
     val eventSource = new EventSource(id, db, collections)
@@ -102,9 +105,9 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
       if(eventSourceTable.contains(id)) {
         eventSourceTable -= id
         snapshot()
-        sender ! DeleteEventSourceResponse(true)
+        sender ! DeleteEventSourceResponse(success = true)
       } else {
-        sender ! DeleteEventSourceResponse(false, "not exist")
+        sender ! DeleteEventSourceResponse(success = false, "not exist")
       }
 
     case request: EventFetchRequest =>
@@ -129,11 +132,10 @@ class EventSourceManager (implicit system: ActorSystem, timeout: Timeout) extend
 
   def receiveRecover = {
     case SnapshotOffer(_, eventSourceTablePersist: EventSourceTablePersist) =>
-      eventSourceTablePersist.table.map(item => {
-        val id = item._1
+      eventSourceTablePersist.table.foreach { item =>
         val eventSourcePersist = item._2
         createEventSource(eventSourcePersist.id, eventSourcePersist.db, eventSourcePersist.collections)
-      })
+      }
     case RecoveryCompleted => //
   }
 }
