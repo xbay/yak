@@ -16,8 +16,14 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 
+# Intellij IDEA specific
 .idea/
 *.iml
 
+# ensime specific
 .ensime
 .ensime_cache/
+
+# Akka persistence specific
+journal/*
+snapshots/*
