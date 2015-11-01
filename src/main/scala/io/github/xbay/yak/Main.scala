@@ -5,6 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
+import org.slf4j.LoggerFactory
 import spray.can.Http
 
 /**
@@ -18,9 +19,7 @@ object Main extends App
   val port = config.getInt("http.port")
 
   implicit val system = ActorSystem("yak")
-
   implicit val executionContext = system.dispatcher
-
   implicit val timeout = requestTimeout(config)
 
   val api = system.actorOf(Props(new RestApi(timeout)), "httpInterface")
@@ -42,17 +41,18 @@ trait ShutdownIfNotBound {
   import scala.concurrent.ExecutionContext
   import scala.concurrent.Future
 
+  val logger = LoggerFactory.getLogger(this.getClass)
   def shutdownIfNotBound(f: Future[Any]) //<co id="ch02_shutdownIfNotBound"/>
                         (implicit system: ActorSystem, ec: ExecutionContext) = {
     f.mapTo[Http.Event].map {
       case Http.Bound(address) =>
-        println(s"REST interface bound to $address")
+        logger.info(s"REST interface bound to $address")
       case Http.CommandFailed(cmd) => //<co id="http_command_failed"/>
-        println(s"REST interface could not bind: ${cmd.failureMessage}, shutting down.")
+        logger.info(s"REST interface could not bind: ${cmd.failureMessage}, shutting down.")
         system.shutdown()
     }.recover {
       case e: Throwable =>
-        println(s"Unexpected error binding to HTTP: ${e.getMessage}, shutting down.")
+        logger.info(s"Unexpected error binding to HTTP: ${e.getMessage}, shutting down.")
         system.shutdown()
     }
   }

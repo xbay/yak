@@ -5,6 +5,7 @@ import akka.event.slf4j.Logger
 import akka.pattern.ask
 import akka.persistence._
 import akka.util.Timeout
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
@@ -65,7 +66,8 @@ case class OplogReaderState(id: String, recentRecordId: String)
 case class EventSourceReaderState(
   bootstrapReaderStates: Map[String, BootstrapReaderState],
   oplogReaderState: OplogReaderState,
-  stage: EventSource.StateModels.State)
+  stage: EventSource.StateModels.State,
+  createAt: DateTime)
 
 class EventSourceActor(val id: String, db: String, collections: List[String])
                       (implicit system: ActorSystem, timeout: Timeout) extends PersistentActor {
@@ -83,7 +85,8 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
     collections.map(c => (c, new BootstrapReaderState(id, c, None, false)))
       .toMap[String, BootstrapReaderState],
     OplogReaderState(id, ""),
-    Bootstrap)
+    Bootstrap,
+    new DateTime())
 
   val bootstrapReaders = collections.map(c => (c, new BootstrapReader(id, db, c)))
     .toMap[String, BootstrapReader]
@@ -105,7 +108,7 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
     //Messages from Reader
     case EventFill(ids, collection) =>
-      println("event fill")
+      logger.info("event fill")
       events = events ++ ids.map(Event(_, collection, "create"))
 
     case BootstrapFinish(collection) =>
