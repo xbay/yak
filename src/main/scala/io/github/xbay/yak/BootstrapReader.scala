@@ -68,7 +68,7 @@ class BootstrapReaderActor(val dbName: String, val collectionName: String) exten
     case Resume(startId) =>
       lastId = startId.getOrElse(lastId)
       val parent = context.parent
-      logger.debug("resume")
+      logger.debug("boostrap reader resume")
       collection
         .find(BSONDocument(  //query
             "_id" -> BSONDocument("$gt" -> BSONObjectID(lastId))),
@@ -81,8 +81,8 @@ class BootstrapReaderActor(val dbName: String, val collectionName: String) exten
             case true =>
               parent ! BootstrapFinish(collectionName)
             case false =>
-              parent ! EventFill(ids.map(_.id), collectionName)
               lastId = ids.last.id
+              parent ! BootstrapEventFill(ids.map(_.id), collectionName, "create", Some(lastId))
           }
         }
   }

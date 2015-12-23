@@ -28,6 +28,11 @@ projectFilesBackup/
 .ensime
 .ensime_cache/
 
+service-*
+access-*
+.project
+.classpath
+
 # Akka persistence specific
 journal/
 snapshots/

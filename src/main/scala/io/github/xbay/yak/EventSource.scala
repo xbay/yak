@@ -49,18 +49,19 @@ object EventSource {
   }
 }
 
-case class EventFill(ids: List[String], collection: String)
-
 case class Event(id: String, collection: String, op: String)
+
+case class BootstrapEventFill(ids: List[String], collection: String, op: String, lastId: Option[String])
+case class OplogEventFill(events: List[Event], lastId: Option[String])
 
 case class BootstrapReaderState(
   id: String, //reader id
   collection: String, // collection name
   recentRecordId: Option[String], // remain id
   finished: Boolean //bootstrap finish flag
-  )
+)
 
-case class OplogReaderState(id: String, recentRecordId: String)
+case class OplogReaderState(id: String, lastId: Option[String])
 
 case class EventSourceReaderState(
   bootstrapReaderStates: Map[String, BootstrapReaderState],
@@ -82,8 +83,10 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
   var state = EventSourceReaderState(
     collections.map(c => (c, new BootstrapReaderState(id, c, None, false)))
       .toMap[String, BootstrapReaderState],
-    OplogReaderState(id, ""),
+    OplogReaderState(id, None),
     Bootstrap)
+
+  logger.info("xxxxxxxxxxxxxxxx")
 
   val bootstrapReaders = collections.map(c => (c, new BootstrapReader(id, db, c)))
     .toMap[String, BootstrapReader]
@@ -104,14 +107,44 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
       tryFillData()
 
     //Messages from Reader
-    case EventFill(ids, collection) =>
-      println("event fill")
-      events = events ++ ids.map(Event(_, collection, "create"))
+    case BootstrapEventFill(ids, collection, op, lastId) =>
+      println("bootstrap event fill")
+      state.stage match {
+        case Bootstrap => {
+          state = state.copy(
+            bootstrapReaderStates = state.bootstrapReaderStates.get(collection) match {
+              case Some(bootstrapReaderState) => {
+                state.bootstrapReaderStates ++ Map(
+                  collection -> bootstrapReaderState.copy(recentRecordId = lastId))
+              }
+              case _ => state.bootstrapReaderStates
+            }
+          )
+          events = events ++ ids.map(Event(_, collection, op))
+          snapshot()
+        }
+        case _ =>
+      }
+
+    case OplogEventFill(evts, lastId) =>
+      println("bootstrap event fill")
+      state.stage match {
+        case Oplog => {
+          state = state.copy(
+            oplogReaderState = state.oplogReaderState.copy(lastId = lastId)
+          )
+          events = events ++ evts
+          snapshot()
+        }
+
+        case _ =>
+      }
 
     case BootstrapFinish(collection) =>
       logger.info(s"Bootstrap finished by id: $id")
       val finishedState = state.bootstrapReaderStates.get(collection).get.copy(finished = true)
       state = state.copy(bootstrapReaderStates = state.bootstrapReaderStates + (collection -> finishedState))
+      snapshot()
 
     //Messages from system
     case SaveSnapshotSuccess(metadata) => // ...
@@ -122,19 +155,27 @@ class EventSourceActor(val id: String, db: String, collections: List[String])
 
   def receiveRecover = {
     case SnapshotOffer(_, stateRecover: EventSourceReaderState) =>
+      logger.info("yyyyyyyyyyyyyyyyyyyyy")
       state = stateRecover
 
     case RecoveryCompleted => tryFillData()
   }
 
   def tryFillData(): Unit = {
-    state.bootstrapReaderStates.values.foreach { st =>
-      st.finished match {
-        case true =>
-        //TODO resume oplog reader
-        case false =>
-          bootstrapReaders.get(st.collection).get.resume(st.recentRecordId)
+    state.stage match {
+      case Bootstrap => {
+        state.bootstrapReaderStates.values.foreach { st =>
+          st.finished match {
+            case true =>
+              //switch to Oplog stage
+              state = state.copy(stage = Oplog)
+              snapshot()
+            case false =>
+              bootstrapReaders.get(st.collection).get.resume(st.recentRecordId)
+          }
+        }
       }
+      case Oplog => oplogReader.resume(state.oplogReaderState.lastId)
     }
   }
 }
