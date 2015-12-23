@@ -23,6 +23,8 @@ project/target
 .idea_modules/
 projectFilesBackup/
 *.iml
+*.iws
+*.ipr
 
 # ensime specific
 .ensime
